@@ -1,98 +1,50 @@
-#include "matrix.h"
-#include "vector.h"
+#include "my_libs/dataset.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 
-int main(void)
+static void print_first_rows(const Matrix *matrix, size_t limit)
 {
-    FILE *input;
-    Matrix matrix = {0, 0, NULL};
-    Matrix transposed = {0, 0, NULL};
-    double *first_row = NULL;
-    double *ones = NULL;
-    double *result = NULL;
-    unsigned long input_rows;
-    unsigned long input_cols;
-    size_t rows;
-    size_t cols;
-    
-    input = fopen("input.txt", "r");
-    if (input == NULL) {
-        printf("Cannot open input.txt\n");
-        return 1;
-    }
-
-    if (fscanf(input, "%lu %lu", &input_rows, &input_cols) != 2) {
-        printf("Cannot read matrix size\n");
-        fclose(input);
-        return 1;
-    }
-    rows = (size_t)input_rows;
-    cols = (size_t)input_cols;
-   
-    matrix = matrix_create(rows, cols);
-    if (!matrix_is_valid(&matrix)) {
-        printf("Cannot create matrix\n");
-        fclose(input);
-        return 1;
-    }
-
-    for (size_t row = 0; row < rows; row++) {
-        for (size_t col = 0; col < cols; col++) {
-            double value;
-
-            if (fscanf(input, "%lf", &value) != 1) {
-                printf("Cannot read matrix value\n");
-                fclose(input);
-                matrix_destroy(&matrix);
-                return 1;
-            }
-            matrix_set(&matrix, row, col, value);
+    for (size_t row = 0; row<limit && row<matrix->rows; row++) {
+        for (size_t column = 0; column < matrix->cols; column++) {
+            printf("%.2f%c", matrix->values[row * matrix->cols + column],
+                   (column + 1 == matrix->cols) ? '\n' : ' ');
         }
     }
-    fclose(input);
+}
 
-    printf("Matrix from file:\n");
-    matrix_print(&matrix);
+int main(int argc, char *argv[])
+{
+    const char *path = (argc > 1) ? argv[1] : "data/wine/wine.data";
+    Dataset dataset = {{0, 0, NULL}, NULL};
+    size_t class_count[3] = {0, 0, 0};
 
-    transposed = matrix_transpose(&matrix);
-    printf("\nTransposed matrix:\n");
-    matrix_print(&transposed);
-
-    first_row = malloc(cols * sizeof(double));
-    ones = malloc(cols * sizeof(double));
-    result = malloc(rows * sizeof(double));
-    if (first_row == NULL || ones == NULL || result == NULL) {
-        printf("Cannot allocate vectors\n");
-        free(first_row);
-        free(ones);
-        free(result);
-        matrix_destroy(&transposed);
-        matrix_destroy(&matrix);
+    if (!dataset_load_wine(path, &dataset)) {
+        printf("Cannot read Wine dataset: %s\n", path);
         return 1;
     }
 
-    for (size_t col = 0; col < cols; col++) {
-        matrix_get(&matrix, 0, col, &first_row[col]);
-        ones[col] = 1.0;
+    for (size_t row = 0; row < dataset.features.rows; row++) {
+        class_count[dataset.labels[row] - 1]++;
     }
 
-    printf("First row as vector:\n");
-    vector_print(first_row, cols);
-    printf("Vector norm: %.2f\n", vector_norm(first_row, cols));
-    vector_normalize(first_row, cols);
-    printf("Normalized vector:\n");
-    vector_print(first_row, cols);
+    printf("Wine dataset: %lu wines, %lu features\n",
+           (unsigned long)dataset.features.rows,
+           (unsigned long)dataset.features.cols);
+    printf("Classes: 1=%lu, 2=%lu, 3=%lu\n",
+           (unsigned long)class_count[0], (unsigned long)class_count[1],
+           (unsigned long)class_count[2]);
+    printf("First 3 feature rows before standardization:\n");
+    print_first_rows(&dataset.features, 3);
 
-    matrix_vector_multiply(&matrix, ones, cols, result);
-    printf("Matrix multiplied by [1 ... 1]:\n");
-    vector_print(result, rows);
+    if (!dataset_standardize(&dataset.features)) {
+        printf("Cannot standardize dataset\n");
+        dataset_destroy(&dataset);
+        return 1;
+    }
 
-    free(first_row);
-    free(ones);
-    free(result);
-    matrix_destroy(&transposed);
-    matrix_destroy(&matrix);
+    printf("\nFirst 3 standardized feature rows:\n");
+    print_first_rows(&dataset.features, 3);
+    printf("\nLabels are stored separately and are not PCA features.\n");
+    dataset_destroy(&dataset);
     return 0;
 }

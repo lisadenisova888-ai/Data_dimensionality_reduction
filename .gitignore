@@ -1,0 +1,6 @@
+/build/
+/PCA_workflow/
+/data/diabetes/
+*.o
+*.a
+*.exe

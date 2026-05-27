@@ -1,28 +1,24 @@
 #include "matrix.h"
 
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+//проверка выхода индексов за границы матрицы
 int matrix_contains(const Matrix *matrix, size_t row, size_t col)
 {
     return (matrix_is_valid(matrix) && (row < matrix->rows) && (col < matrix->cols));
 }
-
+//создание матрицы инициализированной нулями
 Matrix matrix_create(size_t rows, size_t cols)
 {
     Matrix matrix = {0, 0, NULL};
-    size_t element_count;
+    
 
-    if (rows == 0 || cols == 0 ||(rows >( SIZE_MAX/cols))) {
+    if (rows == 0 || cols == 0) {
         return matrix;
     }
 
-    element_count = rows * cols;
-    if (element_count > SIZE_MAX / sizeof(double)) {
-        return matrix;
-    }
-
+    size_t element_count = rows * cols;
+    
     matrix.values = calloc(element_count, sizeof(double));
     if (matrix.values == NULL) {
         return matrix;
@@ -32,7 +28,7 @@ Matrix matrix_create(size_t rows, size_t cols)
     matrix.cols = cols;
     return matrix;
 }
-
+//удаление матрицы
 void matrix_destroy(Matrix *matrix)
 {
     if (matrix == NULL) {
@@ -44,13 +40,13 @@ void matrix_destroy(Matrix *matrix)
     matrix->rows = 0;
     matrix->cols = 0;
 }
-
+//проверка корректности матрицы
 int matrix_is_valid(const Matrix *matrix)
 {
     return ((matrix != NULL) && (matrix->values != NULL)
         && (matrix->rows > 0) && (matrix->cols > 0));
 }
-
+//записывает значение по индексам в матрицу
 int matrix_set(Matrix *matrix, size_t row, size_t col, double value)
 {
     if (!matrix_contains(matrix, row, col)) {
@@ -60,7 +56,7 @@ int matrix_set(Matrix *matrix, size_t row, size_t col, double value)
     matrix->values[row * matrix->cols + col] = value;
     return 1;
 }
-
+//записывает по адресу value элемент матрицы по индексам
 int matrix_get(const Matrix *matrix, size_t row, size_t col, double *value)
 {
     if (value == NULL || !matrix_contains(matrix, row, col)) {
@@ -70,7 +66,7 @@ int matrix_get(const Matrix *matrix, size_t row, size_t col, double *value)
     *value = matrix->values[row * matrix->cols + col];
     return 1;
 }
-
+//заполняет матрицу значениями из массива
 int matrix_fill(Matrix *matrix, const double *values, size_t count)
 {
     if (!matrix_is_valid(matrix) || values == NULL
@@ -84,12 +80,10 @@ int matrix_fill(Matrix *matrix, const double *values, size_t count)
 
     return 1;
 }
-
+//транспонирование матрицы
 Matrix matrix_transpose(const Matrix *matrix)
 {
     Matrix result = {0, 0, NULL};
-    size_t row;
-    size_t col;
 
     if (!matrix_is_valid(matrix)) {
         return result;
@@ -100,8 +94,8 @@ Matrix matrix_transpose(const Matrix *matrix)
         return result;
     }
 
-    for (row = 0; row < matrix->rows; row++) {
-        for (col = 0; col < matrix->cols; col++) {
+    for (size_t row = 0; row < matrix->rows; row++) {
+        for (size_t col = 0; col < matrix->cols; col++) {
 
             result.values[col * result.cols + row] =
                 matrix->values[row * matrix->cols + col];
@@ -111,7 +105,7 @@ Matrix matrix_transpose(const Matrix *matrix)
 
     return result;
 }
-
+//произведение матриц
 Matrix matrix_multiply(const Matrix *left, const Matrix *right)
 {
     Matrix result;
@@ -120,8 +114,8 @@ Matrix matrix_multiply(const Matrix *left, const Matrix *right)
     result.values = NULL;
 
     if (!matrix_is_valid(left) || !matrix_is_valid(right)
-        || left->cols != right->rows) {
-        return result;
+        || left->cols != right->rows) { //корректность матриц, также для умножения 
+        return result;//необходимо равенство числа колонок первой матрицы и строк второй
     }
 
     result = matrix_create(left->rows, right->cols);
@@ -136,7 +130,7 @@ Matrix matrix_multiply(const Matrix *left, const Matrix *right)
             for (size_t inner = 0; inner < left->cols; inner++) {
                 sum +=
                     left->values[row * left->cols + inner]
-                    * right->values[inner * right->cols + col];
+                    * right->values[inner * right->cols + col]; 
             }
 
             result.values[row * result.cols + col] = sum;
@@ -145,7 +139,7 @@ Matrix matrix_multiply(const Matrix *left, const Matrix *right)
 
     return result;
 }
-
+//Умножение матрицы на вектор
 int matrix_vector_multiply(const Matrix *matrix, const double *vector,
                            size_t vector_size, double *result)
 {
@@ -165,7 +159,7 @@ int matrix_vector_multiply(const Matrix *matrix, const double *vector,
 
     return 1;
 }
-
+//вывод матрицы
 void matrix_print(const Matrix *matrix)
 {
    
@@ -175,7 +169,8 @@ void matrix_print(const Matrix *matrix)
 
     for (size_t row = 0; row < matrix->rows; row++) {
         for (size_t col = 0; col < matrix->cols; col++) {
-            printf("%.2f%c", matrix->values[row * matrix->cols + col], ((col + 1) == matrix->cols)  ? '\n' : ' ');
+            printf("%.2f%c", matrix->values[row * matrix->cols + col], 
+                ((col + 1) == matrix->cols)  ? '\n' : ' ');
         }
     }
 }
